@@ -1,0 +1,42 @@
+# AgriSense full stack: MySQL + FastAPI backend
+# Run: docker compose up -d
+# API: http://localhost:8000  Docs: http://localhost:8000/docs
+# React frontend runs separately: npm run dev (localhost:5173)
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: agrisense
+      MYSQL_USER: agrisense
+      MYSQL_PASSWORD: agrisense
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: agrisense
+      MYSQL_PASSWORD: agrisense
+      MYSQL_DATABASE: agrisense
+      GEMINI_API_KEY: AIzaSyCmiBU6D_iiPqD-ik9oj56TWMv2VFDcrSE
+    depends_on:
+      mysql:
+        condition: service_healthy
+    
+volumes:
+  mysql_data:
