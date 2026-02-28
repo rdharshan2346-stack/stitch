@@ -49,6 +49,17 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+@app.get("/")
+def home():
+    return {
+        "message": "AgriSense Cloud Brain is LIVE! 🚀",
+        "status": "Ready",
+        "docs": "/docs"
+    }
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "database": "connected"}
 
 # Allow React dev server and common origins
 app.add_middleware(
@@ -64,7 +75,7 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {"message": "AgriSense Cloud Brain is LIVE! 🚀", "status": "Ready to help the farm."}
-    
+
 # ---------- Sensors ----------
 @app.get("/api/sensors", response_model=list[SensorRead])
 def list_sensors(
