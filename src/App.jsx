@@ -27,8 +27,8 @@ const HomePage = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8000/api/sensors').then(res => res.json()),
-      fetch('http://localhost:8000/api/alerts').then(res => res.json())
+      fetch('https://stitch-xvrj.onrender.com/api/sensors').then(res => res.json()),
+      fetch('https://stitch-xvrj.onrender.com/api/alerts').then(res => res.json())
     ])
       .then(([sensorData, alertData]) => {
         setSensors(sensorData);
@@ -197,7 +197,7 @@ const PlantHelper = () => {
     formData.append("file", selectedFile);
     
     try {
-      const response = await fetch('http://localhost:8000/api/analyze-plant', {
+      const response = await fetch('https://stitch-xvrj.onrender.com/api/analyze-plant', {
         method: 'POST',
         body: formData,
       });
@@ -330,7 +330,7 @@ const AnimalCare = () => {
     formData.append("file", selectedFile);
     
     try {
-      const response = await fetch('http://localhost:8000/api/analyze-animal', {
+      const response = await fetch('https://stitch-xvrj.onrender.com/api/analyze-animal', {
         method: 'POST',
         body: formData,
       });
@@ -445,7 +445,7 @@ const CowTracker = () => {
   const [lastUpdated, setLastUpdated] = useState("");
 
   const fetchCowData = () => {
-    fetch('http://localhost:8000/api/cows')
+    fetch('https://stitch-xvrj.onrender.com/api/cows')
       .then(res => res.json())
       .then(data => {
         setHerd(data);
@@ -540,7 +540,7 @@ const WeatherFriend = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/weather')
+    fetch('https://stitch-xvrj.onrender.com/api/weather')
       .then(res => res.json())
       .then(data => {
         setWeather(data);
@@ -713,7 +713,7 @@ const SoilStories = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/stories')
+    fetch('https://stitch-xvrj.onrender.com/api/stories')
       .then(res => res.json())
       .then(data => {
         setStories(data);

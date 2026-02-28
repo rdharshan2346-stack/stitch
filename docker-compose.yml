@@ -1,6 +1,6 @@
 # AgriSense full stack: MySQL + FastAPI backend
 # Run: docker compose up -d
-# API: http://localhost:8000  Docs: http://localhost:8000/docs
+# API: https://stitch-xvrj.onrender.com  Docs: https://stitch-xvrj.onrender.com/docs
 # React frontend runs separately: npm run dev (localhost:5173)
 
 services:
