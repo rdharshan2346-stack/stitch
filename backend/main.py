@@ -61,7 +61,10 @@ app.add_middleware(
     ],
     allow_headers=["*"],
 )
-
+@app.get("/")
+def home():
+    return {"message": "AgriSense Cloud Brain is LIVE! 🚀", "status": "Ready to help the farm."}
+    
 # ---------- Sensors ----------
 @app.get("/api/sensors", response_model=list[SensorRead])
 def list_sensors(
