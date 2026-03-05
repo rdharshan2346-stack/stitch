@@ -195,7 +195,7 @@ const PlantHelper = () => {
     
     const formData = new FormData();
     formData.append("file", selectedFile);
-    const formData = new FormData();
+    
     formData.append("file", selectedFile);
     formData.append("language", i18n.language); // <-- Add this new line here!
     try {
