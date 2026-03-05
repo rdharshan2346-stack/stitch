@@ -12,7 +12,7 @@
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-3. API docs: http://localhost:8000/docs  
+3. API docs: https://stitch-xvrj.onrender.com/docs  
    CORS is enabled for the React frontend at http://localhost:5173.
 
 ## Docker (production-style)
@@ -21,7 +21,7 @@ From project root:
 ```bash
 docker compose up -d
 ```
-- API: http://localhost:8000  
+- API: https://stitch-xvrj.onrender.com  
 - MySQL: localhost:3306 (user `agrisense` / password `agrisense`, database `agrisense`)
 
 ## API overview

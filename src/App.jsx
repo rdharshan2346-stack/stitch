@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import { Home, Camera, Heart, MapPin, CloudSun, MessageCircle, BookOpen, Globe, ArrowRight, UploadCloud, CheckCircle2, Sprout, ThumbsUp, Droplets, Wind, Send, Bot, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import VoiceAssistant from "./components/VoiceAssistant";
-
+import ImageUploader from './ImageUploader'; // Adjust the path if you didn't put it in a 'components' folder
 // ==========================================
 // 1. PLACEHOLDER COMPONENT
 // ==========================================
@@ -231,18 +231,7 @@ const PlantHelper = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
           <h3 className="text-xl font-bold text-gray-800 mb-4">{t('common.upload_image')}</h3>
           
-          <div className="flex-1 border-2 border-dashed border-green-200 rounded-xl bg-green-50 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-all hover:bg-green-100/50">
-            {preview ? (
-              <img src={preview} alt="Plant preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
-            ) : (
-              <div className="text-center">
-                <UploadCloud size={48} className="text-green-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 font-medium">{t('common.click_drag')}</p>
-                <p className="text-xs text-gray-400 mt-1">{t('common.supports_formats')}</p>
-              </div>
-            )}
-            <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-          </div>
+          <ImageUploader preview={preview} onImageChange={handleImageChange} theme="pink" />
 
           <button 
             onClick={handleAnalyze}
@@ -364,18 +353,7 @@ const AnimalCare = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
           <h3 className="text-xl font-bold text-gray-800 mb-4">{t('common.upload_image')}</h3>
           
-          <div className="flex-1 border-2 border-dashed border-pink-200 rounded-xl bg-pink-50 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-all hover:bg-pink-100/50">
-            {preview ? (
-              <img src={preview} alt="Animal preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
-            ) : (
-              <div className="text-center">
-                <UploadCloud size={48} className="text-pink-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 font-medium">{t('common.click_drag')}</p>
-                <p className="text-xs text-gray-400 mt-1">{t('common.supports_formats')}</p>
-              </div>
-            )}
-            <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-          </div>
+          <ImageUploader preview={preview} onImageChange={handleImageChange} theme="pink" />
 
           <button 
             onClick={handleAnalyze}
