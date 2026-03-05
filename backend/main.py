@@ -157,46 +157,49 @@ def create_alert(alert: AlertCreate, db: Session = Depends(get_db)):
 # ---------- AI Vision Models ----------
 # Configure the Gemini API using the key from docker-compose
 # ---------- AI Vision Models ----------
+# ---------- AI Vision Models ----------
 @app.post("/api/analyze-plant")
-async def analyze_plant(file: UploadFile = File(...)):
+async def analyze_plant(file: UploadFile = File(...), language: str = Form("en")):
     """
-    Receives an image, sends it to Google's new GenAI Vision API,
-    and returns a structured JSON diagnosis.
+    Receives an image and language preference, sends it to Google's GenAI Vision API,
+    and returns a structured JSON diagnosis in the requested language.
     """
     try:
-        # 1. Read the uploaded file
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
         
-        # 2. Initialize the new Google GenAI Client
         client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         
-        # 3. Give the AI its instructions
-        prompt = """
+        # Map the 2-letter code to the full language name for better AI prompting
+        lang_map = {"en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada", "ml": "Malayalam"}
+        target_language = lang_map.get(language, "English")
+        
+        prompt = f"""
         You are an expert plant pathologist and agronomist. Analyze this image of a plant.
         Identify any diseases, pests, or nutrient deficiencies.
+        
         You MUST return your response as a raw JSON object with EXACTLY these four keys:
         "status": (e.g., 'Healthy', 'Needs Attention', 'Critical'),
         "diagnosis": (A 1-2 sentence description of what you see),
         "confidence": (A percentage, e.g., '95%'),
         "treatment": (Actionable, step-by-step advice for the farmer to fix it)
         
+        CRITICAL INSTRUCTION: You MUST write the actual advice and descriptions for "status", "diagnosis", and "treatment" in {target_language}. 
+        However, the JSON keys themselves MUST remain in English exactly as written above.
+        
         Do NOT include any markdown formatting like ```json. Just return the pure JSON bracket structure.
         """
         
-        # 4. Send the image to the newest Gemini Flash model!
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[prompt, image]
         )
         
-        # 5. Clean up the AI's response and turn it into a Python dictionary
         result_text = response.text.strip()
         if result_text.startswith("```json"):
             result_text = result_text.replace("```json", "").replace("```", "").strip()
             
         diagnosis_data = json.loads(result_text)
-        
         return diagnosis_data
 
     except Exception as e:
@@ -204,50 +207,51 @@ async def analyze_plant(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="The AI failed to analyze the image.")
 
 @app.post("/api/analyze-animal")
-async def analyze_animal(file: UploadFile = File(...)):
+async def analyze_animal(file: UploadFile = File(...), language: str = Form("en")):
     """
-    Receives an image of livestock/animals, sends it to Google's GenAI Vision API,
-    and returns a structured JSON veterinary diagnosis.
+    Receives an image of livestock and a language preference, sends it to GenAI,
+    and returns a structured JSON veterinary diagnosis in the requested language.
     """
     try:
-        # 1. Read the uploaded file
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
         
-        # 2. Initialize the Google GenAI Client
         client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         
-        # 3. Give the AI its Veterinary instructions
-        prompt = """
+        lang_map = {"en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada", "ml": "Malayalam"}
+        target_language = lang_map.get(language, "English")
+        
+        prompt = f"""
         You are an expert livestock veterinarian and animal care specialist. Analyze this image of a farm animal.
         Identify any visible injuries, skin conditions, signs of illness, or general health status.
+        
         You MUST return your response as a raw JSON object with EXACTLY these four keys:
         "status": (e.g., 'Healthy', 'Needs Vet Attention', 'Critical'),
         "diagnosis": (A 1-2 sentence description of what you observe),
         "confidence": (A percentage, e.g., '90%'),
         "treatment": (Actionable, safe first-aid or care advice for the farmer)
         
+        CRITICAL INSTRUCTION: You MUST write the actual advice and descriptions for "status", "diagnosis", and "treatment" in {target_language}. 
+        However, the JSON keys themselves MUST remain in English exactly as written above.
+        
         Do NOT include any markdown formatting like ```json. Just return the pure JSON bracket structure.
         """
         
-        # 4. Send the image to the Gemini Flash model!
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[prompt, image]
         )
         
-        # 5. Clean up the AI's response
         result_text = response.text.strip()
         if result_text.startswith("```json"):
             result_text = result_text.replace("```json", "").replace("```", "").strip()
             
         diagnosis_data = json.loads(result_text)
-        
         return diagnosis_data
 
     except Exception as e:
         print(f"Animal Vision Error: {e}")
-        raise HTTPException(status_code=500, detail="The AI failed to analyze the animal image.") 
+        raise HTTPException(status_code=500, detail="The AI failed to analyze the animal image.")
 # ---------- GPS Tracking Models ----------
 @app.get("/api/cows")
 def get_cow_locations():

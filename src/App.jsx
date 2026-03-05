@@ -174,7 +174,7 @@ const HomePage = () => {
 // 3. PLANT HELPER COMPONENT
 // ==========================================
 const PlantHelper = () => {
-  const { t } = useTranslation();
+  const { t,il8n} = useTranslation();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -195,7 +195,9 @@ const PlantHelper = () => {
     
     const formData = new FormData();
     formData.append("file", selectedFile);
-    
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    formData.append("language", i18n.language); // <-- Add this new line here!
     try {
       const response = await fetch('https://stitch-xvrj.onrender.com/api/analyze-plant', {
         method: 'POST',
