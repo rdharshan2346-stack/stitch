@@ -4,6 +4,7 @@ import { Home, Camera, Heart, MapPin, CloudSun, MessageCircle, BookOpen, Globe, 
 import { useTranslation } from 'react-i18next';
 import VoiceAssistant from "./components/VoiceAssistant";
 import ImageUploader from './ImageUploader'; // Adjust the path if you didn't put it in a 'components' folder
+import i18n from './i18n';
 // ==========================================
 // 1. PLACEHOLDER COMPONENT
 // ==========================================
