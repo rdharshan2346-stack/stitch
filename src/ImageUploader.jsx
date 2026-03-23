@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud, Camera, Image as ImageIcon, X } from 'lucide-react';
 import Webcam from 'react-webcam';
+import i18n from './i18n';
 
 const ImageUploader = ({ preview, onImageChange, theme }) => {
   const galleryInputRef = useRef(null);
