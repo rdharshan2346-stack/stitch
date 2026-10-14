@@ -520,17 +520,38 @@ const WeatherFriend = () => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [usingMyLocation, setUsingMyLocation] = useState(false);
+
   useEffect(() => {
-    fetch('https://stitch-api-za7e.onrender.com/api/weather')
-      .then(res => res.json())
-      .then(data => {
-        setWeather(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch weather:", err);
-        setLoading(false);
-      });
+    const load = (query = '') => {
+      fetch(`https://stitch-api-za7e.onrender.com/api/weather${query}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Weather request failed');
+          return res.json();
+        })
+        .then(data => {
+          setWeather(data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to fetch weather:", err);
+          setLoading(false);
+        });
+    };
+
+    // Ask the browser for the user's location; fall back to the server default (Chennai)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUsingMyLocation(true);
+          load(`?lat=${pos.coords.latitude.toFixed(4)}&lon=${pos.coords.longitude.toFixed(4)}`);
+        },
+        () => load(),
+        { timeout: 8000 }
+      );
+    } else {
+      load();
+    }
   }, []);
 
   if (loading) return <div className="p-12 text-center text-blue-500 animate-pulse">{t('weather.syncing')}</div>;
@@ -544,6 +565,9 @@ const WeatherFriend = () => {
           {t('weather.title')}
         </h2>
         <p className="text-gray-600 text-lg">{t('weather.desc')}</p>
+        <p className="text-xs text-gray-400 mt-2">
+          {usingMyLocation ? 'Live weather for your location' : 'Live weather for Chennai (allow location for your farm)'} · Open-Meteo
+        </p>
       </div>
 
       <div className="bg-gradient-to-br from-blue-50 to-sky-100 rounded-3xl p-8 shadow-sm border border-blue-100">
@@ -581,6 +605,7 @@ const WeatherFriend = () => {
               <p className="font-bold text-gray-800 mb-2">{day.day}</p>
               <p className="text-2xl font-bold text-blue-600 mb-1">{day.temp}°C</p>
               <p className="text-sm text-gray-500">{day.condition}</p>
+              {day.rain_chance !== undefined && <p className="text-xs text-blue-400 mt-1">Rain {day.rain_chance}%</p>}
             </div>
           ))}
         </div>
