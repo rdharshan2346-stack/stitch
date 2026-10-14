@@ -291,26 +291,127 @@ def get_cow_locations():
         
     return live_data
 # ---------- Weather API Models ----------
-@app.get("/api/weather")
-def get_weather():
-    """
-    Simulates a live weather API returning current conditions and farm advice.
-    """
+# ---------- Real weather (Open-Meteo: free, no API key) ----------
+import time
+import urllib.request
+import urllib.parse
+from datetime import datetime
+
+_WEATHER_CACHE = {}          # {(lat, lon): (timestamp, payload)}
+_WEATHER_TTL = 600           # cache for 10 minutes so we don't hammer the free API
+
+# WMO weather codes -> readable text
+_WMO = {
+    0: "Clear", 1: "Mostly Clear", 2: "Partly Cloudy", 3: "Cloudy",
+    45: "Fog", 48: "Fog",
+    51: "Light Drizzle", 53: "Drizzle", 55: "Heavy Drizzle",
+    56: "Freezing Drizzle", 57: "Freezing Drizzle",
+    61: "Light Rain", 63: "Rain", 65: "Heavy Rain",
+    66: "Freezing Rain", 67: "Freezing Rain",
+    71: "Light Snow", 73: "Snow", 75: "Heavy Snow", 77: "Snow",
+    80: "Rain Showers", 81: "Rain Showers", 82: "Heavy Showers",
+    85: "Snow Showers", 86: "Snow Showers",
+    95: "Thunderstorm", 96: "Thunderstorm", 99: "Thunderstorm",
+}
+
+
+def _fetch_open_meteo(lat: float, lon: float) -> dict:
+    """Blocking HTTP call to Open-Meteo (run it in a thread from async code)."""
+    params = urllib.parse.urlencode({
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+        "daily": "weather_code,temperature_2m_max,precipitation_probability_max",
+        "timezone": "auto",
+        "forecast_days": 4,
+    })
+    url = f"https://api.open-meteo.com/v1/forecast?{params}"
+    with urllib.request.urlopen(url, timeout=8) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _farm_advice(temp, humidity, wind, today_rain, next_rain_day):
+    """Simple rule-based advice built from the real numbers."""
+    tips = []
+    if today_rain >= 60:
+        tips.append("Rain is likely today - postpone spraying, harvesting and fertiliser application.")
+    elif next_rain_day:
+        when = "tomorrow" if next_rain_day == "Tomorrow" else f"on {next_rain_day}"
+        tips.append(f"Rain is expected {when} - hold off on heavy irrigation until then.")
+    else:
+        tips.append("No rain expected soon - plan irrigation for your crops.")
+    if temp >= 35:
+        tips.append("It's very hot - water early morning or evening and give livestock shade and water.")
+    elif temp <= 12:
+        tips.append("It's cold - protect young plants and keep animals sheltered.")
+    if wind >= 25:
+        tips.append("Strong winds - avoid pesticide spraying today.")
+    elif today_rain < 60 and wind < 20:
+        tips.append("Good conditions for light field work.")
+    if humidity >= 85:
+        tips.append("High humidity - watch crops for fungal disease.")
+    return " ".join(tips)
+
+
+def _build_weather(data: dict) -> dict:
+    """Turn the raw Open-Meteo response into the shape our frontend already uses."""
+    cur = data["current"]
+    daily = data["daily"]
+    temp = round(cur["temperature_2m"])
+    humidity = round(cur["relative_humidity_2m"])
+    wind = round(cur["wind_speed_10m"])
+
+    forecast = []
+    next_rain_day = None
+    for i in range(1, min(4, len(daily["time"]))):
+        d = datetime.strptime(daily["time"][i], "%Y-%m-%d")
+        label = "Tomorrow" if i == 1 else d.strftime("%A")
+        cond = _WMO.get(daily["weather_code"][i], "Cloudy")
+        rain_p = daily["precipitation_probability_max"][i] or 0
+        if next_rain_day is None and rain_p >= 60:
+            next_rain_day = label
+        forecast.append({
+            "day": label,
+            "temp": round(daily["temperature_2m_max"][i]),
+            "condition": cond,
+            "rain_chance": rain_p,
+        })
+
+    today_rain = (daily["precipitation_probability_max"][0] or 0)
     return {
         "current": {
-            "temperature": 24,
-            "condition": "Partly Cloudy",
-            "humidity": 65,
-            "wind_speed": 12,
-            "soil_moisture": "Adequate"
+            "temperature": temp,
+            "condition": _WMO.get(cur["weather_code"], "Cloudy"),
+            "humidity": humidity,
+            "wind_speed": wind,
+            "rain_chance": today_rain,
         },
-        "forecast": [
-            {"day": "Tomorrow", "temp": 26, "condition": "Sunny"},
-            {"day": "Wednesday", "temp": 22, "condition": "Rain"},
-            {"day": "Thursday", "temp": 21, "condition": "Cloudy"}
-        ],
-        "advice": "Perfect conditions for light tractor work. Hold off on heavy crop watering since rain is expected on Wednesday."
+        "forecast": forecast,
+        "advice": _farm_advice(temp, humidity, wind, today_rain, next_rain_day),
+        "source": "Open-Meteo",
     }
+
+
+@app.get("/api/weather")
+async def get_weather(
+    lat: float = Query(13.0827, ge=-90, le=90),     # default: Chennai
+    lon: float = Query(80.2707, ge=-180, le=180),
+):
+    """Real weather for the given coordinates (defaults to Chennai)."""
+    key = (round(lat, 2), round(lon, 2))
+    cached = _WEATHER_CACHE.get(key)
+    if cached and time.time() - cached[0] < _WEATHER_TTL:
+        return cached[1]
+    try:
+        raw = await asyncio.to_thread(_fetch_open_meteo, key[0], key[1])
+        payload = _build_weather(raw)
+    except Exception as e:
+        print(f"Weather fetch failed: {e}")
+        raise HTTPException(status_code=502, detail="Weather service unavailable")
+    _WEATHER_CACHE[key] = (time.time(), payload)
+    return payload
+
+
 # ---------- AI Chatbot Models ----------
 @app.post("/api/chat")
 async def chat_with_agri_ai(request: ChatRequest):
