@@ -178,22 +178,22 @@ You help farmers understand sensor data, manage irrigation, and optimize crop he
 ${sensorContext}
 IMPORTANT: Always respond in the SAME LANGUAGE the user writes in. Keep answers concise (2-3 sentences), practical, and farm-focused.`;
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      // Call our own backend (Gemini) instead of calling an AI API from the browser
+      const history = messages
+        .slice(-6)
+        .map((m) => `${m.role === "user" ? "Farmer" : "Assistant"}: ${m.content}`)
+        .join("\n");
+      const res = await fetch("https://stitch-api-za7e.onrender.com/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [
-            ...messages.map((m) => ({ role: m.role, content: m.content })),
-            { role: "user", content: trimmed },
-          ],
+          message: `${systemPrompt}\n\n${history ? history + "\n" : ""}Farmer: ${trimmed}`,
         }),
       });
 
+      if (!res.ok) throw new Error("Chat backend error");
       const data = await res.json();
-      const reply = data.content?.[0]?.text || "Sorry, I couldn't process that. Please try again.";
+      const reply = data.reply || "Sorry, I couldn't process that. Please try again.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       speak(reply);
     } catch {
