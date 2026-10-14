@@ -515,6 +515,77 @@ const CowTracker = () => {
 // ==========================================
 // 3.8 WEATHER FRIEND COMPONENT
 // ==========================================
+// ---- Real weather helpers (Open-Meteo, called straight from the browser) ----
+const WMO_TEXT = {
+  0: 'Clear', 1: 'Mostly Clear', 2: 'Partly Cloudy', 3: 'Cloudy',
+  45: 'Fog', 48: 'Fog',
+  51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle', 56: 'Freezing Drizzle', 57: 'Freezing Drizzle',
+  61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain', 66: 'Freezing Rain', 67: 'Freezing Rain',
+  71: 'Light Snow', 73: 'Snow', 75: 'Heavy Snow', 77: 'Snow',
+  80: 'Rain Showers', 81: 'Rain Showers', 82: 'Heavy Showers', 85: 'Snow Showers', 86: 'Snow Showers',
+  95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm',
+};
+
+// Simple rule-based farming advice built from the real numbers
+const farmAdvice = (temp, humidity, wind, todayRain, nextRainDay) => {
+  const tips = [];
+  if (todayRain >= 60) tips.push('Rain is likely today - postpone spraying, harvesting and fertiliser application.');
+  else if (nextRainDay) tips.push(`Rain is expected ${nextRainDay === 'Tomorrow' ? 'tomorrow' : 'on ' + nextRainDay} - hold off on heavy irrigation until then.`);
+  else tips.push('No rain expected soon - plan irrigation for your crops.');
+  if (temp >= 35) tips.push("It's very hot - water early morning or evening and give livestock shade and water.");
+  else if (temp <= 12) tips.push("It's cold - protect young plants and keep animals sheltered.");
+  if (wind >= 25) tips.push('Strong winds - avoid pesticide spraying today.');
+  else if (todayRain < 60 && wind < 20) tips.push('Good conditions for light field work.');
+  if (humidity >= 85) tips.push('High humidity - watch crops for fungal disease.');
+  return tips.join(' ');
+};
+
+// Turn the raw Open-Meteo response into the shape the page renders
+const buildWeather = (data) => {
+  const cur = data.current;
+  const daily = data.daily;
+  const temp = Math.round(cur.temperature_2m);
+  const humidity = Math.round(cur.relative_humidity_2m);
+  const wind = Math.round(cur.wind_speed_10m);
+  const todayRain = daily.precipitation_probability_max[0] ?? 0;
+
+  const forecast = [];
+  let nextRainDay = null;
+  for (let i = 1; i < Math.min(4, daily.time.length); i++) {
+    const label = i === 1
+      ? 'Tomorrow'
+      : new Date(`${daily.time[i]}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+    const rain = daily.precipitation_probability_max[i] ?? 0;
+    if (!nextRainDay && rain >= 60) nextRainDay = label;
+    forecast.push({
+      day: label,
+      temp: Math.round(daily.temperature_2m_max[i]),
+      condition: WMO_TEXT[daily.weather_code[i]] || 'Cloudy',
+      rain_chance: rain,
+    });
+  }
+
+  return {
+    current: { temperature: temp, condition: WMO_TEXT[cur.weather_code] || 'Cloudy', humidity, wind_speed: wind, rain_chance: todayRain },
+    forecast,
+    advice: farmAdvice(temp, humidity, wind, todayRain, nextRainDay),
+  };
+};
+
+const fetchOpenMeteo = async (lat, lon) => {
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code',
+    daily: 'weather_code,temperature_2m_max,precipitation_probability_max',
+    timezone: 'auto',
+    forecast_days: '4',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo error ${res.status}`);
+  return buildWeather(await res.json());
+};
+
 const WeatherFriend = () => {
   const { t } = useTranslation();
   const [weather, setWeather] = useState(null);
@@ -523,34 +594,39 @@ const WeatherFriend = () => {
   const [usingMyLocation, setUsingMyLocation] = useState(false);
 
   useEffect(() => {
-    const load = (query = '') => {
-      fetch(`https://stitch-api-za7e.onrender.com/api/weather${query}`)
-        .then(res => {
+    const DEFAULT = { lat: 13.0827, lon: 80.2707 }; // Chennai
+
+    // 1) Real weather straight from Open-Meteo (each visitor has their own IP -> no shared rate limit)
+    // 2) If that fails, fall back to our own backend
+    const load = async ({ lat, lon }) => {
+      try {
+        setWeather(await fetchOpenMeteo(lat, lon));
+      } catch (err) {
+        console.error('Direct weather failed, trying backend:', err);
+        try {
+          const res = await fetch(`https://stitch-api-za7e.onrender.com/api/weather?lat=${lat}&lon=${lon}`);
           if (!res.ok) throw new Error('Weather request failed');
-          return res.json();
-        })
-        .then(data => {
-          setWeather(data);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error("Failed to fetch weather:", err);
-          setLoading(false);
-        });
+          setWeather(await res.json());
+        } catch (err2) {
+          console.error('Failed to fetch weather:', err2);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // Ask the browser for the user's location; fall back to the server default (Chennai)
+    // Ask the browser for the user's location; fall back to Chennai
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setUsingMyLocation(true);
-          load(`?lat=${pos.coords.latitude.toFixed(4)}&lon=${pos.coords.longitude.toFixed(4)}`);
+          load({ lat: +pos.coords.latitude.toFixed(4), lon: +pos.coords.longitude.toFixed(4) });
         },
-        () => load(),
+        () => load(DEFAULT),
         { timeout: 8000 }
       );
     } else {
-      load();
+      load(DEFAULT);
     }
   }, []);
 
