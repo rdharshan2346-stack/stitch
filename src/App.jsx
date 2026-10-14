@@ -28,8 +28,8 @@ const HomePage = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch('https://stitch-xvrj.onrender.com/api/sensors').then(res => res.json()),
-      fetch('https://stitch-xvrj.onrender.com/api/alerts').then(res => res.json())
+      fetch('https://stitch-api-za7e.onrender.com/api/sensors').then(res => res.json()),
+      fetch('https://stitch-api-za7e.onrender.com/api/alerts').then(res => res.json())
     ])
       .then(([sensorData, alertData]) => {
         setSensors(sensorData);
@@ -200,7 +200,7 @@ const PlantHelper = () => {
     formData.append("file", selectedFile);
     formData.append("language", i18n.language); // <-- Add this new line here!
     try {
-      const response = await fetch('https://stitch-xvrj.onrender.com/api/analyze-plant', {
+      const response = await fetch('https://stitch-api-za7e.onrender.com/api/analyze-plant', {
         method: 'POST',
         body: formData,
       });
@@ -322,7 +322,7 @@ const AnimalCare = () => {
     formData.append("file", selectedFile);
     
     try {
-      const response = await fetch('https://stitch-xvrj.onrender.com/api/analyze-animal', {
+      const response = await fetch('https://stitch-api-za7e.onrender.com/api/analyze-animal', {
         method: 'POST',
         body: formData,
       });
@@ -426,7 +426,7 @@ const CowTracker = () => {
   const [lastUpdated, setLastUpdated] = useState("");
 
   const fetchCowData = () => {
-    fetch('https://stitch-xvrj.onrender.com/api/cows')
+    fetch('https://stitch-api-za7e.onrender.com/api/cows')
       .then(res => res.json())
       .then(data => {
         setHerd(data);
@@ -521,7 +521,7 @@ const WeatherFriend = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('https://stitch-xvrj.onrender.com/api/weather')
+    fetch('https://stitch-api-za7e.onrender.com/api/weather')
       .then(res => res.json())
       .then(data => {
         setWeather(data);
@@ -609,7 +609,7 @@ const ChatWithMe = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch('https://stitch-xvrj.onrender.com', {
+      const response = await fetch('https://stitch-api-za7e.onrender.com/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -694,7 +694,7 @@ const SoilStories = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('https://stitch-xvrj.onrender.com/api/stories')
+    fetch('https://stitch-api-za7e.onrender.com/api/stories')
       .then(res => res.json())
       .then(data => {
         setStories(data);
